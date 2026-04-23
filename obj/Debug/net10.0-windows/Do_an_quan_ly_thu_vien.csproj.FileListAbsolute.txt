@@ -1,0 +1,14 @@
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\bin\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.exe
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\bin\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.deps.json
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\bin\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.runtimeconfig.json
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\bin\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.dll
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\bin\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.pdb
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\obj\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.GeneratedMSBuildEditorConfig.editorconfig
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\obj\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.AssemblyInfoInputs.cache
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\obj\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.AssemblyInfo.cs
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\obj\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.csproj.CoreCompileInputs.cache
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\obj\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.dll
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\obj\Debug\net10.0-windows\refint\Do_an_quan_ly_thu_vien.dll
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\obj\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.pdb
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\obj\Debug\net10.0-windows\Do_an_quan_ly_thu_vien.genruntimeconfig.cache
+E:\WorkingSpace\Do_an_quan_ly_thu_vien\obj\Debug\net10.0-windows\ref\Do_an_quan_ly_thu_vien.dll
