@@ -1,0 +1,79 @@
+   1: using System;
+   2: using System.Diagnostics;
+   3: using System.Drawing;
+   4: using System.Windows.Forms;
+   5: 
+   6: namespace UI_NongTrai
+   7: {
+   8:     public class Form1 : Form
+   9:     {
+  10:         private Button btnRun;
+  11:         private TextBox txtOutput;
+  12: 
+  13:         public Form1()
+  14:         {
+  15:             // Form
+  16:             this.Text = "Nông trại C++ + C#";
+  17:             this.Size = new Size(500, 400);
+  18:             this.StartPosition = FormStartPosition.CenterScreen;
+  19: 
+  20:             // Button
+  21:             btnRun = new Button();
+  22:             btnRun.Text = "Chạy chương trình C++";
+  23:             btnRun.Size = new Size(200, 40);
+  24:             btnRun.Location = new Point(150, 20);
+  25:             btnRun.Click += BtnRun_Click;
+  26:             this.Controls.Add(btnRun);
+  27: 
+  28:             // TextBox
+  29:             txtOutput = new TextBox();
+  30:             txtOutput.Multiline = true;
+  31:             txtOutput.ScrollBars = ScrollBars.Vertical;
+  32:             txtOutput.Size = new Size(400, 250);
+  33:             txtOutput.Location = new Point(50, 80);
+  34:             txtOutput.Font = new Font("Consolas", 10);
+  35:             this.Controls.Add(txtOutput);
+  36:         }
+  37: 
+  38:         private void BtnRun_Click(object sender, EventArgs e)
+  39:         {
+  40:             try
+  41:             {
+  42:                 // Dùng 'using' để tự động giải phóng tài nguyên Process sau khi chạy xong
+  43:                 using (Process p = new Process())
+  44:                 {
+  45:                     // Biên dịch file C++ thành 1.exe ở đường dẫn này
+  46:                     p.StartInfo.FileName = @"main.exe";
+  47:                     p.StartInfo.UseShellExecute = false;
+  48:                     p.StartInfo.RedirectStandardOutput = true;
+  49:                     p.StartInfo.CreateNoWindow = true;
+  50:                     
+  51:                     // Cấu hình UTF8 đề phòng sau này C++ in ra Tiếng Việt có dấu
+  52:                     p.StartInfo.StandardOutputEncoding = System.Text.Encoding.UTF8;
+  53: 
+  54:                     p.Start();
+  55: 
+  56:                     string output = p.StandardOutput.ReadToEnd();
+  57:                     p.WaitForExit();
+  58: 
+  59:                     // Hiển thị đẹp hơn
+  60:                     txtOutput.Text = output.Replace("\n", Environment.NewLine);
+  61:                 }
+  62:             }
+  63:             catch (Exception ex)
+  64:             {
+  65:                 MessageBox.Show("Lỗi: " + ex.Message);
+  66:             }
+  67:         }
+  68:     }
+  69: 
+  70:     static class Program
+  71:     {
+  72:         [STAThread]
+  73:         static void Main()
+  74:         {
+  75:             Application.EnableVisualStyles();
+  76:             Application.Run(new Form1());
+  77:         }
+  78:     }
+  79: }

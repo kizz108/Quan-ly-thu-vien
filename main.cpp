@@ -2,7 +2,45 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <limits>
+#include <cctype>
 using namespace std;
+
+string toLowerCopy(string s) {
+    transform(s.begin(), s.end(), s.begin(),
+              [](unsigned char c) { return static_cast<char>(tolower(c)); });
+    return s;
+}
+
+int nhapSoNguyen(const string& thongBao, int minValue = numeric_limits<int>::min()) {
+    int value;
+    while (true) {
+        cout << thongBao;
+        if (cin >> value && value >= minValue) {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return value;
+        }
+
+        cout << "Du lieu khong hop le. Vui long nhap lai!\n";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+}
+
+double nhapSoThuc(const string& thongBao, double minValue = -numeric_limits<double>::max()) {
+    double value;
+    while (true) {
+        cout << thongBao;
+        if (cin >> value && value >= minValue) {
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            return value;
+        }
+
+        cout << "Du lieu khong hop le. Vui long nhap lai!\n";
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    }
+}
 
 class DocGia {
 private:
@@ -23,21 +61,19 @@ public:
         diaChi = dc;
     }
 
-    string getMaDG() { return maDG; }
-    string getGioiTinh() { return gioiTinh; }
-    string getTen() { return ten; }
+    string getMaDG() const { return maDG; }
+    string getGioiTinh() const { return gioiTinh; }
+    string getTen() const { return ten; }
 
     void nhap() {
         cout << "Ma doc gia: ";
         cin >> maDG;
-        cin.ignore();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         cout << "Ten: ";
         getline(cin, ten);
 
-        cout << "Tuoi: ";
-        cin >> tuoi;
-        cin.ignore();
+        tuoi = nhapSoNguyen("Tuoi: ", 0);
 
         cout << "Gioi tinh: ";
         getline(cin, gioiTinh);
@@ -60,13 +96,10 @@ public:
     }
 
     void capNhat() {
-        cin.ignore();
         cout << "Ten moi: ";
         getline(cin, ten);
 
-        cout << "Tuoi moi: ";
-        cin >> tuoi;
-        cin.ignore();
+        tuoi = nhapSoNguyen("Tuoi moi: ", 0);
 
         cout << "Gioi tinh moi: ";
         getline(cin, gioiTinh);
@@ -100,9 +133,9 @@ public:
         soLuong = sl;
     }
 
-    string getMaSach() { return maSach; }
-    string getTheLoai() { return theLoai; }
-    int getSoLuong() { return soLuong; }
+    string getMaSach() const { return maSach; }
+    string getTheLoai() const { return theLoai; }
+    int getSoLuong() const { return soLuong; }
 
     void tangSoLuong(int x) { soLuong += x; }
     void giamSoLuong() { if (soLuong > 0) soLuong--; }
@@ -110,7 +143,7 @@ public:
     void nhap() {
         cout << "Ma sach: ";
         cin >> maSach;
-        cin.ignore();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
         cout << "Ten sach: ";
         getline(cin, tenSach);
@@ -118,11 +151,8 @@ public:
         cout << "The loai: ";
         getline(cin, theLoai);
 
-        cout << "Gia tien: ";
-        cin >> giaTien;
-
-        cout << "So luong: ";
-        cin >> soLuong;
+        giaTien = nhapSoThuc("Gia tien: ", 0.0);
+        soLuong = nhapSoNguyen("So luong: ", 0);
     }
 
     void xuat() {
@@ -132,11 +162,8 @@ public:
     }
 
     void capNhat() {
-        cout << "Gia tien moi: ";
-        cin >> giaTien;
-
-        cout << "So luong moi: ";
-        cin >> soLuong;
+        giaTien = nhapSoThuc("Gia tien moi: ", 0.0);
+        soLuong = nhapSoNguyen("So luong moi: ", 0);
     }
 };
 
@@ -153,8 +180,8 @@ public:
         ngayTra = nt;
     }
 
-    string getMaSach() { return maSach; }
-    string getMaDG() { return maDG; }
+    string getMaSach() const { return maSach; }
+    string getMaDG() const { return maDG; }
 
     void xuat() {
         cout << maDG << " | "
@@ -172,17 +199,31 @@ private:
 
 public:
     bool kiemTraDocGia(string ma) {
-        for (auto dg : dsDocGia)
+        for (const auto& dg : dsDocGia)
             if (dg.getMaDG() == ma)
                 return true;
         return false;
     }
 
     bool kiemTraSach(string ma) {
-        for (auto s : dsSach)
+        for (const auto& s : dsSach)
             if (s.getMaSach() == ma)
                 return true;
         return false;
+    }
+
+    bool docGiaDangMuonSach(const string& ma) {
+        for (const auto& pm : dsMuon)
+            if (pm.getMaDG() == ma)
+                return true;
+        return false;
+    }
+
+    int timViTriPhieuMuon(const string& maSach, const string& maDG) {
+        for (int i = 0; i < dsMuon.size(); i++)
+            if (dsMuon[i].getMaSach() == maSach && dsMuon[i].getMaDG() == maDG)
+                return i;
+        return -1;
     }
 
     int timViTriSach(string ma) {
@@ -228,6 +269,11 @@ public:
             return;
         }
 
+        if (docGiaDangMuonSach(ma)) {
+            cout << "Doc gia dang muon sach, khong the xoa!\n";
+            return;
+        }
+
         dsDocGia.erase(dsDocGia.begin() + pos);
         cout << "Da xoa!\n";
     }
@@ -239,8 +285,8 @@ public:
         int pos = timViTriSach(s.getMaSach());
 
         if (pos != -1) {
-            dsSach[pos].tangSoLuong(1);
-            cout << "Trung ma -> tang so luong!\n";
+            dsSach[pos].tangSoLuong(s.getSoLuong());
+            cout << "Trung ma -> cong them so luong!\n";
             return;
         }
 
@@ -302,15 +348,28 @@ public:
         cin >> tinhTrang;
 
         int posSach = timViTriSach(maSach);
+        int posDG = timViTriDocGia(maDG);
+        int posMuon = timViTriPhieuMuon(maSach, maDG);
+        string tinhTrangChuanHoa = toLowerCopy(tinhTrang);
 
-        if (posSach == -1) {
-            cout << "Sai ma sach!\n";
+        if (posSach == -1 || posDG == -1) {
+            cout << "Sai ma sach hoac ma doc gia!\n";
             return;
         }
 
-        if (tinhTrang == "con") {
-            dsSach[posSach].tangSoLuong(1);
+        if (posMuon == -1) {
+            cout << "Khong tim thay phieu muon hop le!\n";
+            return;
         }
+
+        if (tinhTrangChuanHoa == "con") {
+            dsSach[posSach].tangSoLuong(1);
+        } else if (tinhTrangChuanHoa != "mat") {
+            cout << "Tinh trang khong hop le (chi nhan 'con' hoac 'mat').\n";
+            return;
+        }
+
+        dsMuon.erase(dsMuon.begin() + posMuon);
 
         cout << "Tra sach thanh cong!\n";
     }
@@ -320,16 +379,20 @@ public:
         cout << "\nTong doc gia: " << dsDocGia.size();
         cout << "\nSo sach dang muon: " << dsMuon.size();
 
-        int nam = 0, nu = 0;
-        for (auto dg : dsDocGia) {
-            if (dg.getGioiTinh() == "nam")
+        int nam = 0, nu = 0, khac = 0;
+        for (const auto& dg : dsDocGia) {
+            string gt = toLowerCopy(dg.getGioiTinh());
+            if (gt == "nam")
                 nam++;
-            else
+            else if (gt == "nu")
                 nu++;
+            else
+                khac++;
         }
 
         cout << "\nNam: " << nam;
-        cout << "\nNu: " << nu << endl;
+        cout << "\nNu: " << nu;
+        cout << "\nKhac: " << khac << endl;
     }
 };
 
@@ -348,8 +411,7 @@ void menu() {
         cout << "7. Tra sach\n";
         cout << "8. Thong ke\n";
         cout << "0. Thoat\n";
-        cout << "Chon: ";
-        cin >> chon;
+        chon = nhapSoNguyen("Chon: ", 0);
 
         switch (chon) {
         case 1: tv.themDocGia(); break;
@@ -360,6 +422,9 @@ void menu() {
         case 6: tv.muonSach(); break;
         case 7: tv.traSach(); break;
         case 8: tv.thongKe(); break;
+        default:
+            cout << "Lua chon khong hop le!\n";
+            break;
         }
     } while (chon != 0);
 }
