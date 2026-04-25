@@ -6,8 +6,10 @@
 #include <cctype>
 #include <iomanip>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <ctime>
+#include <utility>
 
 using namespace std;
 
@@ -104,6 +106,33 @@ int ngayToNumber(const string& ngay) {
         return -1;
     }
     return y * 10000 + m * 100 + d;
+}
+
+int ngayToSerialDay(const string& ngay) {
+    int d, m, y;
+    if (!tachNgay(ngay, d, m, y)) {
+        return -1;
+    }
+
+    int total = 0;
+    for (int nam = 1900; nam < y; nam++) {
+        total += laNamNhuan(nam) ? 366 : 365;
+    }
+
+    for (int thang = 1; thang < m; thang++) {
+        total += soNgayTrongThang(thang, y);
+    }
+
+    return total + d;
+}
+
+int khoangCachNgay(const string& tuNgay, const string& denNgay) {
+    int start = ngayToSerialDay(tuNgay);
+    int end = ngayToSerialDay(denNgay);
+    if (start == -1 || end == -1) {
+        return -1;
+    }
+    return end - start;
 }
 
 int ngayHienTaiToNumber() {
@@ -211,12 +240,13 @@ string chonTinhTrangSach() {
 }
 
 class DocGia {
-private:
+protected:
     string maDG, ten, gioiTinh, sdt, email, diaChi;
     int tuoi{};
 
 public:
     DocGia() = default;
+    virtual ~DocGia() = default;
 
     string getMaDG() const { return maDG; }
     string getTen() const { return ten; }
@@ -224,7 +254,11 @@ public:
 
     void setMaDG(const string& ma) { maDG = ma; }
 
-    void nhapThongTin() {
+    virtual string getLoaiDocGia() const = 0;
+    virtual int getSoSachMuonToiDa() const = 0;
+    virtual int getSoNgayMuonToiDa() const = 0;
+
+    virtual void nhapThongTin() {
         ten = nhapChuoiKhongRong("Ten: ");
         tuoi = nhapSoNguyen("Tuoi: ", 0);
         gioiTinh = chonGioiTinh();
@@ -233,23 +267,73 @@ public:
         diaChi = nhapChuoiKhongRong("Dia chi: ");
     }
 
-    void capNhat() {
+    virtual void capNhat() {
         cout << "Nhap thong tin moi cho doc gia:\n";
         nhapThongTin();
     }
 
-    void xuat() const {
+    virtual void xuat() const {
         cout << left
              << setw(12) << maDG
+             << setw(16) << getLoaiDocGia()
              << setw(24) << ten
              << setw(8) << tuoi
              << setw(12) << gioiTinh
              << setw(16) << sdt
              << setw(30) << email
              << setw(26) << diaChi
+             << setw(10) << getSoSachMuonToiDa()
+             << setw(12) << getSoNgayMuonToiDa()
              << '\n';
     }
 };
+
+class DocGiaThuong : public DocGia {
+public:
+    string getLoaiDocGia() const override { return "Thuong"; }
+    int getSoSachMuonToiDa() const override { return 3; }
+    int getSoNgayMuonToiDa() const override { return 14; }
+};
+
+class DocGiaVIP : public DocGia {
+public:
+    string getLoaiDocGia() const override { return "VIP"; }
+    int getSoSachMuonToiDa() const override { return 10; }
+    int getSoNgayMuonToiDa() const override { return 30; }
+};
+
+class DocGiaSinhVien : public DocGia {
+public:
+    string getLoaiDocGia() const override { return "Sinh vien"; }
+    int getSoSachMuonToiDa() const override { return 5; }
+    int getSoNgayMuonToiDa() const override { return 21; }
+};
+
+int chonLoaiDocGia() {
+    int chon;
+    do {
+        cout << "Loai doc gia:\n";
+        cout << "1. Doc gia thuong\n";
+        cout << "2. Doc gia VIP\n";
+        cout << "3. Doc gia sinh vien\n";
+        chon = nhapSoNguyen("Chon: ", 1);
+
+        if (chon >= 1 && chon <= 3) {
+            return chon;
+        }
+
+        cout << "Lua chon khong hop le. Vui long chon lai!\n";
+    } while (true);
+}
+
+unique_ptr<DocGia> taoDocGiaTheoLoai(int loai) {
+    switch (loai) {
+    case 1: return unique_ptr<DocGia>(new DocGiaThuong());
+    case 2: return unique_ptr<DocGia>(new DocGiaVIP());
+    case 3: return unique_ptr<DocGia>(new DocGiaSinhVien());
+    default: return unique_ptr<DocGia>(new DocGiaThuong());
+    }
+}
 
 class Sach {
 private:
@@ -341,7 +425,7 @@ public:
 
 class ThuVien {
 private:
-    vector<DocGia> dsDocGia;
+    vector<unique_ptr<DocGia>> dsDocGia;
     vector<Sach> dsSach;
     vector<PhieuMuon> dsMuon;
 
@@ -364,14 +448,17 @@ public:
     void inTieuDeDocGia() const {
         cout << left
              << setw(12) << "Ma DG"
+             << setw(16) << "Loai"
              << setw(24) << "Ten"
              << setw(8) << "Tuoi"
              << setw(12) << "Gioi tinh"
              << setw(16) << "SDT"
              << setw(30) << "Email"
              << setw(26) << "Dia chi"
+             << setw(10) << "Toi da"
+             << setw(12) << "So ngay"
              << '\n';
-        cout << string(128, '-') << '\n';
+        cout << string(166, '-') << '\n';
     }
 
     void inTieuDeSach() const {
@@ -397,7 +484,7 @@ public:
 
     int timViTriDocGia(const string& ma) const {
         for (int i = 0; i < static_cast<int>(dsDocGia.size()); i++) {
-            if (dsDocGia[i].getMaDG() == ma) {
+            if (dsDocGia[i]->getMaDG() == ma) {
                 return i;
             }
         }
@@ -431,6 +518,16 @@ public:
         return false;
     }
 
+    int demSachDangMuonCuaDocGia(const string& maDG) const {
+        int count = 0;
+        for (const auto& pm : dsMuon) {
+            if (pm.getMaDG() == maDG) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     bool sachDangDuocMuon(const string& maSach) const {
         for (const auto& pm : dsMuon) {
             if (pm.getMaSach() == maSach) {
@@ -442,7 +539,7 @@ public:
 
     string layTenDocGia(const string& maDG) const {
         int pos = timViTriDocGia(maDG);
-        return pos == -1 ? "Khong ro" : dsDocGia[pos].getTen();
+        return pos == -1 ? "Khong ro" : dsDocGia[pos]->getTen();
     }
 
     string layTenSach(const string& maSach) const {
@@ -460,7 +557,7 @@ public:
 
         inTieuDeDocGia();
         for (const auto& dg : dsDocGia) {
-            dg.xuat();
+            dg->xuat();
         }
     }
 
@@ -473,10 +570,10 @@ public:
             return;
         }
 
-        DocGia dg;
-        dg.setMaDG(ma);
-        dg.nhapThongTin();
-        dsDocGia.push_back(dg);
+        unique_ptr<DocGia> dg = taoDocGiaTheoLoai(chonLoaiDocGia());
+        dg->setMaDG(ma);
+        dg->nhapThongTin();
+        dsDocGia.push_back(move(dg));
         cout << "Them doc gia thanh cong!\n";
     }
 
@@ -490,7 +587,7 @@ public:
             return;
         }
 
-        dsDocGia[pos].capNhat();
+        dsDocGia[pos]->capNhat();
         cout << "Cap nhat doc gia thanh cong!\n";
     }
 
@@ -524,7 +621,7 @@ public:
         }
 
         inTieuDeDocGia();
-        dsDocGia[pos].xuat();
+        dsDocGia[pos]->xuat();
     }
 
     void xemSach() const {
@@ -650,11 +747,27 @@ public:
             return;
         }
 
+        int soSachDangMuon = demSachDangMuonCuaDocGia(maDG);
+        int soSachMuonToiDa = dsDocGia[posDG]->getSoSachMuonToiDa();
+        if (soSachDangMuon >= soSachMuonToiDa) {
+            cout << "Doc gia " << dsDocGia[posDG]->getLoaiDocGia()
+                 << " chi duoc muon toi da " << soSachMuonToiDa << " sach.\n";
+            return;
+        }
+
         string ngayMuon = nhapNgayHopLe("Ngay muon (dd/mm/yyyy): ");
         string ngayHenTra = nhapNgayHopLe("Ngay tra du kien (dd/mm/yyyy): ");
 
         if (ngayToNumber(ngayHenTra) < ngayToNumber(ngayMuon)) {
             cout << "Ngay tra du kien khong duoc nho hon ngay muon!\n";
+            return;
+        }
+
+        int soNgayMuon = khoangCachNgay(ngayMuon, ngayHenTra);
+        int soNgayMuonToiDa = dsDocGia[posDG]->getSoNgayMuonToiDa();
+        if (soNgayMuon > soNgayMuonToiDa) {
+            cout << "Doc gia " << dsDocGia[posDG]->getLoaiDocGia()
+                 << " chi duoc muon toi da " << soNgayMuonToiDa << " ngay.\n";
             return;
         }
 
@@ -759,17 +872,23 @@ public:
         }
 
         int nam = 0, nu = 0;
+        map<string, int> thongKeLoaiDocGia;
         for (const auto& dg : dsDocGia) {
-            if (toLowerCopy(dg.getGioiTinh()) == "nam") {
+            string gioiTinh = toLowerCopy(dg->getGioiTinh());
+            if (gioiTinh == "nam") {
                 nam++;
-            } else if (toLowerCopy(dg.getGioiTinh()) == "nu") {
+            } else if (gioiTinh == "nu") {
                 nu++;
             }
+            thongKeLoaiDocGia[dg->getLoaiDocGia()]++;
         }
 
         cout << "\nTong so doc gia: " << dsDocGia.size() << '\n';
         cout << "Doc gia nam: " << nam << '\n';
         cout << "Doc gia nu: " << nu << '\n';
+        for (const auto& item : thongKeLoaiDocGia) {
+            cout << "Doc gia " << item.first << ": " << item.second << '\n';
+        }
 
         xemDocGiaTreHan();
     }
@@ -809,8 +928,8 @@ public:
     }
 
     void sapXepDocGiaTheoTen() {
-        sort(dsDocGia.begin(), dsDocGia.end(), [](const DocGia& a, const DocGia& b) {
-            return toLowerCopy(a.getTen()) < toLowerCopy(b.getTen());
+        sort(dsDocGia.begin(), dsDocGia.end(), [](const unique_ptr<DocGia>& a, const unique_ptr<DocGia>& b) {
+            return toLowerCopy(a->getTen()) < toLowerCopy(b->getTen());
         });
         cout << "Da sap xep doc gia theo ten.\n";
         xemDocGia();
