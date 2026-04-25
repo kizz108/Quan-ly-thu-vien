@@ -61,6 +61,32 @@ string nhapChuoiKhongRong(const string& thongBao) {
     return value;
 }
 
+string dinhDangTien(double soTien) {
+    return to_string(static_cast<long long>(soTien)) + " VND";
+}
+
+bool xacNhanNopPhat(double soTienPhat) {
+    cout << "Tong tien phat: " << dinhDangTien(soTienPhat) << '\n';
+
+    int chon;
+    do {
+        cout << "Xac nhan nop phat:\n";
+        cout << "1. Da nop phat\n";
+        cout << "2. Chua nop phat\n";
+        chon = nhapSoNguyen("Chon: ", 1);
+
+        if (chon == 1) {
+            return true;
+        }
+
+        if (chon == 2) {
+            return false;
+        }
+
+        cout << "Lua chon khong hop le. Vui long chon lai!\n";
+    } while (true);
+}
+
 bool laNamNhuan(int nam) {
     return (nam % 400 == 0) || (nam % 4 == 0 && nam % 100 != 0);
 }
@@ -413,6 +439,12 @@ public:
         return ngayHenTraNumber != -1 && today != 0 && ngayHenTraNumber < today;
     }
 
+    bool biTreHanKhiTra(const string& ngayTraThucTe) const {
+        int ngayTraNumber = ngayToNumber(ngayTraThucTe);
+        int ngayHenTraNumber = ngayToNumber(ngayHenTra);
+        return ngayTraNumber != -1 && ngayHenTraNumber != -1 && ngayTraNumber > ngayHenTraNumber;
+    }
+
     void xuat() const {
         cout << left
              << setw(12) << maDG
@@ -432,16 +464,16 @@ private:
 public:
     ThuVien() {
         dsSach = {
-            Sach("S01", "Dac Nhan Tam", "Tam ly hoc", 80000, 5),
-            Sach("S02", "Tu duy nhanh va cham", "Tam ly hoc", 120000, 3),
-            Sach("S03", "Kinh te hoc vi mo", "Kinh te", 150000, 4),
-            Sach("S04", "Nguyen ly ke toan", "Kinh te", 130000, 6),
-            Sach("S05", "Lap trinh C++", "Khoa hoc/Ki thuat", 200000, 7),
-            Sach("S06", "Tri tue nhan tao", "Khoa hoc/Ki thuat", 250000, 2),
-            Sach("S07", "Lich su Viet Nam", "Lich su", 90000, 5),
-            Sach("S08", "The gioi co dai", "Lich su", 110000, 3),
-            Sach("S09", "Toi thay hoa vang tren co xanh", "Van hoc", 95000, 6),
-            Sach("S10", "Truyen Kieu", "Van hoc", 70000, 4)
+            Sach("101", "Dac Nhan Tam", "Tam ly hoc", 80000, 5),
+            Sach("102", "Tu duy nhanh va cham", "Tam ly hoc", 120000, 3),
+            Sach("103", "Kinh te hoc vi mo", "Kinh te", 150000, 4),
+            Sach("104", "Nguyen ly ke toan", "Kinh te", 130000, 6),
+            Sach("105", "Lap trinh C++", "Khoa hoc/Ki thuat", 200000, 7),
+            Sach("106", "Tri tue nhan tao", "Khoa hoc/Ki thuat", 250000, 2),
+            Sach("107", "Lich su Viet Nam", "Lich su", 90000, 5),
+            Sach("108", "The gioi co dai", "Lich su", 110000, 3),
+            Sach("109", "Toi thay hoa vang tren co xanh", "Van hoc", 95000, 6),
+            Sach("110", "Truyen Kieu", "Van hoc", 70000, 4)
         };
     }
 
@@ -794,9 +826,31 @@ public:
         }
 
         string ngayTraThucTe = nhapNgayHopLe("Ngay tra thuc te (dd/mm/yyyy): ");
-        (void)ngayTraThucTe;
+        const PhieuMuon& phieuMuon = dsMuon[posMuon];
+        if (ngayToNumber(ngayTraThucTe) < ngayToNumber(phieuMuon.getNgayMuon())) {
+            cout << "Ngay tra thuc te khong duoc nho hon ngay muon!\n";
+            return;
+        }
 
         string tinhTrang = chonTinhTrangSach();
+        double tienPhat = 0.0;
+
+        if (phieuMuon.biTreHanKhiTra(ngayTraThucTe)) {
+            tienPhat += 50000.0;
+            cout << "Tra sach tre han. Phat: " << dinhDangTien(50000.0) << '\n';
+        }
+
+        if (tinhTrang == "mat") {
+            double phatMatSach = dsSach[posSach].getGiaTien();
+            tienPhat += phatMatSach;
+            cout << "Sach bi mat. Phat 100% tien sach: " << dinhDangTien(phatMatSach) << '\n';
+        }
+
+        if (tienPhat > 0 && !xacNhanNopPhat(tienPhat)) {
+            cout << "Chua nop phat. Khong the hoan tat tra sach!\n";
+            return;
+        }
+
         if (tinhTrang == "con") {
             dsSach[posSach].tangSoLuong(1);
             cout << "Sach con tot. Da tang lai so luong sach.\n";
@@ -943,11 +997,33 @@ public:
         xemSach();
     }
 
-    void sapXepSachTheoSoLuongGiamDan() {
-        sort(dsSach.begin(), dsSach.end(), [](const Sach& a, const Sach& b) {
-            return a.getSoLuong() > b.getSoLuong();
-        });
-        cout << "Da sap xep sach theo so luong giam dan.\n";
+    void sapXepSachTheoSoLuong() {
+        int chon;
+        do {
+            cout << "\nSap xep sach theo so luong:\n";
+            cout << "1. Tang dan\n";
+            cout << "2. Giam dan\n";
+            chon = nhapSoNguyen("Chon: ", 1);
+
+            if (chon == 1) {
+                sort(dsSach.begin(), dsSach.end(), [](const Sach& a, const Sach& b) {
+                    return a.getSoLuong() < b.getSoLuong();
+                });
+                cout << "Da sap xep sach theo so luong tang dan.\n";
+                break;
+            }
+
+            if (chon == 2) {
+                sort(dsSach.begin(), dsSach.end(), [](const Sach& a, const Sach& b) {
+                    return a.getSoLuong() > b.getSoLuong();
+                });
+                cout << "Da sap xep sach theo so luong giam dan.\n";
+                break;
+            }
+
+            cout << "Lua chon khong hop le. Vui long chon lai!\n";
+        } while (true);
+
         xemSach();
     }
 };
@@ -1011,7 +1087,7 @@ void menuThongKe(ThuVien& tv) {
         cout << "3. Xem danh sach doc gia tre han\n";
         cout << "4. Sap xep doc gia theo ten\n";
         cout << "5. Sap xep sach theo ten\n";
-        cout << "6. Sap xep sach theo so luong giam dan\n";
+        cout << "6. Sap xep sach theo so luong\n";
         cout << "0. Quay lai menu chinh\n";
         chon = nhapSoNguyen("Chon: ", 0);
 
@@ -1021,7 +1097,7 @@ void menuThongKe(ThuVien& tv) {
         case 3: tv.xemDocGiaTreHan(); break;
         case 4: tv.sapXepDocGiaTheoTen(); break;
         case 5: tv.sapXepSachTheoTen(); break;
-        case 6: tv.sapXepSachTheoSoLuongGiamDan(); break;
+        case 6: tv.sapXepSachTheoSoLuong(); break;
         case 0: break;
         default: cout << "Lua chon khong hop le!\n"; break;
         }

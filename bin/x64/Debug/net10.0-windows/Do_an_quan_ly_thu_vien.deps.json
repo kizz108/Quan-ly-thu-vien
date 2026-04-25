@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "Do_an_quan_ly_thu_vien/1.0.0": {
+        "runtime": {
+          "Do_an_quan_ly_thu_vien.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "Do_an_quan_ly_thu_vien/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}
