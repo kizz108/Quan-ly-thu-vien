@@ -8,32 +8,24 @@
     "net10.0-windows7.0": []
   },
   "packageFolders": {
-    "C:\\Users\\Admin\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\HBJBi\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "E:\\WorkingSpace\\Cpp\\Quan-ly-thu-vien\\Do_an_quan_ly_thu_vien.csproj",
+      "projectUniqueName": "D:\\KHTN\\nam3ki2\\laptrinhhuongdoituong\\project\\Do_an_quan_ly_thu_vien.csproj",
       "projectName": "Do_an_quan_ly_thu_vien",
-      "projectPath": "E:\\WorkingSpace\\Cpp\\Quan-ly-thu-vien\\Do_an_quan_ly_thu_vien.csproj",
-      "packagesPath": "C:\\Users\\Admin\\.nuget\\packages\\",
-      "outputPath": "E:\\WorkingSpace\\Cpp\\Quan-ly-thu-vien\\obj\\",
+      "projectPath": "D:\\KHTN\\nam3ki2\\laptrinhhuongdoituong\\project\\Do_an_quan_ly_thu_vien.csproj",
+      "packagesPath": "C:\\Users\\HBJBi\\.nuget\\packages\\",
+      "outputPath": "D:\\KHTN\\nam3ki2\\laptrinhhuongdoituong\\project\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\Admin\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        "C:\\Users\\HBJBi\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net10.0-windows"
       ],
       "sources": {
-        "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
-        "C:\\Program Files\\dotnet\\library-packs": {},
         "https://api.nuget.org/v3/index.json": {}
       },
       "frameworks": {

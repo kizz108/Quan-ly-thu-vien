@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -73,6 +74,22 @@ namespace QuanLyThuVienUi
         }
     }
 
+    public sealed class LichSuMuonTra
+    {
+        public string MaDG { get; set; } = "";
+        public string TenDocGia { get; set; } = "";
+        public string MaSach { get; set; } = "";
+        public string TenSach { get; set; } = "";
+        public DateTime NgayMuon { get; set; }
+        public DateTime NgayHenTra { get; set; }
+        public DateTime NgayTraThucTe { get; set; }
+        public string TinhTrangSach { get; set; } = "";
+        public decimal TienPhatTreHan { get; set; }
+        public decimal TienPhatMatSach { get; set; }
+        public decimal TongTienPhat => TienPhatTreHan + TienPhatMatSach;
+        public int SoNgayTre => Math.Max(0, (NgayTraThucTe.Date - NgayHenTra.Date).Days);
+    }
+
     internal static class LibraryConstants
     {
         public static readonly string[] TheLoai =
@@ -95,11 +112,23 @@ namespace QuanLyThuVienUi
         private readonly List<DocGia> dsDocGia = new List<DocGia>();
         private readonly List<Sach> dsSach = new List<Sach>();
         private readonly List<PhieuMuon> dsMuon = new List<PhieuMuon>();
+        private readonly List<LichSuMuonTra> dsLichSu = new List<LichSuMuonTra>();
 
         private readonly FlowLayoutPanel actionPanel;
         private readonly DataGridView grid;
+        private readonly PictureBox titleIcon;
         private readonly Label lblTitle;
         private readonly TextBox txtInfo;
+        private string docGiaSortKey = "";
+        private bool docGiaSortAscending;
+
+        private enum MenuIconKind
+        {
+            Readers,
+            Books,
+            Loans,
+            Stats
+        }
 
         private static readonly Color AppBackground = Color.FromArgb(241, 245, 249);
         private static readonly Color SidebarBackground = Color.FromArgb(15, 23, 42);
@@ -152,10 +181,10 @@ namespace QuanLyThuVienUi
                 Margin = new Padding(0, 0, 0, 18)
             });
 
-            AddNavButton(nav, "Độc giả", HienDocGia);
-            AddNavButton(nav, "Sách", HienSach);
-            AddNavButton(nav, "Mượn / Trả", HienMuonTra);
-            AddNavButton(nav, "Thống kê", HienThongKe);
+            AddNavButton(nav, "Độc giả", MenuIconKind.Readers, HienDocGia);
+            AddNavButton(nav, "Sách", MenuIconKind.Books, HienSach);
+            AddNavButton(nav, "Mượn / Trả", MenuIconKind.Loans, HienMuonTra);
+            AddNavButton(nav, "Thống kê", MenuIconKind.Stats, HienThongKe);
 
             var content = new TableLayoutPanel
             {
@@ -171,14 +200,34 @@ namespace QuanLyThuVienUi
             content.RowStyles.Add(new RowStyle(SizeType.Percent, 28F));
             root.Controls.Add(content, 1, 0);
 
+            var titlePanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
+                Padding = new Padding(0, 0, 0, 10),
+                BackColor = AppBackground
+            };
+            content.Controls.Add(titlePanel, 0, 0);
+
+            titleIcon = new PictureBox
+            {
+                Size = new Size(30, 30),
+                SizeMode = PictureBoxSizeMode.CenterImage,
+                Margin = new Padding(0, 3, 10, 0),
+                BackColor = AppBackground
+            };
+            titlePanel.Controls.Add(titleIcon);
+
             lblTitle = new Label
             {
                 AutoSize = true,
                 Font = new Font("Segoe UI", 18F, FontStyle.Bold),
                 ForeColor = TextColor,
-                Padding = new Padding(0, 0, 0, 10)
+                Margin = new Padding(0)
             };
-            content.Controls.Add(lblTitle, 0, 0);
+            titlePanel.Controls.Add(lblTitle);
 
             actionPanel = new FlowLayoutPanel
             {
@@ -253,22 +302,125 @@ namespace QuanLyThuVienUi
                 new Sach { MaSach = "109", TenSach = "Tôi thấy hoa vàng trên cỏ xanh", TheLoai = "Văn học", GiaTien = 95000, SoLuong = 6 },
                 new Sach { MaSach = "110", TenSach = "Truyện Kiều", TheLoai = "Văn học", GiaTien = 70000, SoLuong = 4 }
             });
+
+            dsDocGia.AddRange(new DocGia[]
+            {
+                new DocGiaThuong
+                {
+                    MaDG = "DG001",
+                    Ten = "Nguyễn Văn Anh",
+                    Tuoi = 28,
+                    GioiTinh = "Nam",
+                    Sdt = "0901234567",
+                    Email = "anh.nguyen@example.com",
+                    DiaChi = "Hà Nội"
+                },
+                new DocGiaVIP
+                {
+                    MaDG = "DG002",
+                    Ten = "Trần Thị Minh",
+                    Tuoi = 35,
+                    GioiTinh = "Nữ",
+                    Sdt = "0912345678",
+                    Email = "minh.tran@example.com",
+                    DiaChi = "Hồ Chí Minh"
+                },
+                new DocGiaSinhVien
+                {
+                    MaDG = "DG003",
+                    Ten = "Lê Văn Nam",
+                    Tuoi = 21,
+                    GioiTinh = "Nam",
+                    Sdt = "0987654321",
+                    Email = "nam.le@student.edu.vn",
+                    DiaChi = "Đà Nẵng"
+                },
+                new DocGiaThuong
+                {
+                    MaDG = "DG004",
+                    Ten = "Phạm Thị Hồng",
+                    Tuoi = 30,
+                    GioiTinh = "Nữ",
+                    Sdt = "0945678123",
+                    Email = "hong.pham@example.com",
+                    DiaChi = "Cần Thơ"
+                },
+                new DocGiaVIP
+                {
+                    MaDG = "DG005",
+                    Ten = "Đỗ Quốc Bảo",
+                    Tuoi = 42,
+                    GioiTinh = "Nam",
+                    Sdt = "0978123456",
+                    Email = "bao.do@example.com",
+                    DiaChi = "Hải Phòng"
+                }
+            });
         }
 
-        private void AddNavButton(FlowLayoutPanel panel, string text, Action action)
+        private void AddNavButton(FlowLayoutPanel panel, string text, MenuIconKind iconKind, Action action)
         {
             var button = new Button
             {
                 Text = text,
+                Image = CreateMenuIcon(iconKind),
                 Width = 180,
                 Height = 44,
                 Margin = new Padding(0, 0, 0, 10),
+                ImageAlign = ContentAlignment.MiddleLeft,
                 TextAlign = ContentAlignment.MiddleLeft,
+                TextImageRelation = TextImageRelation.ImageBeforeText,
                 Padding = new Padding(14, 0, 0, 0)
             };
             StyleNavButton(button);
             button.Click += (_, _) => action();
             panel.Controls.Add(button);
+        }
+
+        private void SetTitle(string text, MenuIconKind iconKind)
+        {
+            lblTitle.Text = text;
+            titleIcon.Image?.Dispose();
+            titleIcon.Image = CreateMenuIcon(iconKind, new Size(28, 28), MutedTextColor);
+        }
+
+        private static Bitmap CreateMenuIcon(MenuIconKind kind)
+        {
+            return CreateMenuIcon(kind, new Size(22, 22), Color.FromArgb(226, 232, 240));
+        }
+
+        private static Bitmap CreateMenuIcon(MenuIconKind kind, Size size, Color color)
+        {
+            var bitmap = new Bitmap(size.Width, size.Height);
+            using (Graphics g = Graphics.FromImage(bitmap))
+            using (var brush = new SolidBrush(color))
+            using (var font = new Font("Segoe MDL2 Assets", size.Height - 3, FontStyle.Regular, GraphicsUnit.Pixel))
+            using (var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
+            {
+                g.Clear(Color.Transparent);
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
+                g.DrawString(GetMenuIconGlyph(kind), font, brush, new RectangleF(0, 0, size.Width, size.Height), format);
+            }
+
+            return bitmap;
+        }
+
+        private static string GetMenuIconGlyph(MenuIconKind kind)
+        {
+            switch (kind)
+            {
+            case MenuIconKind.Readers:
+                return "\uE716";
+            case MenuIconKind.Books:
+                return "\uE736";
+            case MenuIconKind.Loans:
+                return "\uE72D";
+            case MenuIconKind.Stats:
+                return "\uE9D2";
+            default:
+                return "\uE10F";
+            }
         }
 
         private void SetActions(params (string text, Action action)[] actions)
@@ -315,14 +467,19 @@ namespace QuanLyThuVienUi
 
         private void HienDocGia()
         {
-            lblTitle.Text = "Quản lý độc giả";
+            SetTitle("Quản lý độc giả", MenuIconKind.Readers);
             SetActions(
                 ("Xem tất cả", () => RefreshDocGia(dsDocGia)),
                 ("Thêm", ThemDocGia),
                 ("Cập nhật", CapNhatDocGia),
                 ("Xóa", XoaDocGia),
                 ("Tìm theo mã", TimDocGia),
+                ("Tìm theo tên", TimDocGiaTheoTen),
+                ("Tìm theo loại", TimDocGiaTheoLoai),
                 ("Sắp xếp tên", SapXepDocGiaTheoTen),
+                ("Sắp xếp mã", SapXepDocGiaTheoMa),
+                ("Sắp xếp giới tính", SapXepDocGiaTheoGioiTinh),
+                ("Sắp xếp loại", SapXepDocGiaTheoLoai),
                 ("Nhập TXT", NhapDocGiaTuFile),
                 ("Xuất TXT", XuatDocGiaRaFile));
             RefreshDocGia(dsDocGia);
@@ -446,10 +603,111 @@ namespace QuanLyThuVienUi
             RefreshDocGia(new[] { docGia });
         }
 
+        private void TimDocGiaTheoTen()
+        {
+            string? ten = TextPrompt.Show(this, "Tìm độc giả", "Tên độc giả:");
+            if (string.IsNullOrWhiteSpace(ten))
+            {
+                return;
+            }
+
+            List<DocGia> result = dsDocGia
+                .Where(d => d.Ten.Contains(ten.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (result.Count == 0)
+            {
+                ShowError("Không tìm thấy độc giả.");
+                return;
+            }
+
+            RefreshDocGia(result);
+        }
+
+        private void TimDocGiaTheoLoai()
+        {
+            string? loai = ChoicePrompt.Show(this, "Tìm độc giả theo loại", "Chọn loại độc giả:", LibraryConstants.LoaiDocGia);
+            if (loai == null)
+            {
+                return;
+            }
+
+            List<DocGia> result = dsDocGia.Where(d => d.Loai == loai).ToList();
+            if (result.Count == 0)
+            {
+                ShowError("Không có độc giả thuộc loại này.");
+                return;
+            }
+
+            RefreshDocGia(result);
+        }
+
         private void SapXepDocGiaTheoTen()
         {
-            dsDocGia.Sort((a, b) => string.Compare(a.Ten, b.Ten, StringComparison.OrdinalIgnoreCase));
+            SapXepDocGia("Ten");
+        }
+
+        private void SapXepDocGiaTheoMa()
+        {
+            SapXepDocGia("MaDG");
+        }
+
+        private void SapXepDocGiaTheoGioiTinh()
+        {
+            SapXepDocGia("GioiTinh");
+        }
+
+        private void SapXepDocGiaTheoLoai()
+        {
+            SapXepDocGia("Loai");
+        }
+
+        private void SapXepDocGia(string sortKey)
+        {
+            if (docGiaSortKey == sortKey)
+            {
+                docGiaSortAscending = !docGiaSortAscending;
+            }
+            else
+            {
+                docGiaSortKey = sortKey;
+                docGiaSortAscending = true;
+            }
+
+            Comparison<DocGia> comparison;
+            switch (sortKey)
+            {
+            case "MaDG":
+                comparison = (a, b) => CompareDocGiaText(a.MaDG, b.MaDG);
+                break;
+            case "GioiTinh":
+                comparison = (a, b) => CompareDocGiaText(a.GioiTinh, b.GioiTinh);
+                break;
+            case "Loai":
+                comparison = (a, b) => CompareDocGiaText(a.Loai, b.Loai);
+                break;
+            default:
+                comparison = (a, b) => CompareDocGiaText(a.Ten, b.Ten);
+                break;
+            }
+
+            dsDocGia.Sort((a, b) =>
+            {
+                int cmp = comparison(a, b);
+                if (cmp == 0 && sortKey != "MaDG")
+                {
+                    cmp = CompareDocGiaText(a.MaDG, b.MaDG);
+                }
+
+                return docGiaSortAscending ? cmp : -cmp;
+            });
+
             HienDocGia();
+        }
+
+        private static int CompareDocGiaText(string a, string b)
+        {
+            return string.Compare(a, b, StringComparison.CurrentCultureIgnoreCase);
         }
 
         private void NhapDocGiaTuFile()
@@ -590,15 +848,17 @@ namespace QuanLyThuVienUi
 
         private void HienSach()
         {
-            lblTitle.Text = "Quản lý sách";
+            SetTitle("Quản lý sách", MenuIconKind.Books);
             SetActions(
                 ("Xem tất cả", () => RefreshSach(dsSach)),
                 ("Thêm", ThemSach),
                 ("Cập nhật", CapNhatSach),
                 ("Xóa", XoaSach),
                 ("Tìm theo mã", TimSachTheoMa),
+                ("Tìm theo tên", TimSachTheoTen),
                 ("Tìm thể loại", TimSachTheoTheLoai),
-                ("Sắp xếp tên", SapXepSachTheoTen),
+                ("Lọc tồn kho", LocSachTheoTonKho),
+                ("Sắp xếp mã", SapXepSachTheoMa),
                 ("Sắp xếp số lượng", SapXepSachTheoSoLuong),
                 ("Nhập TXT", NhapSachTuFile),
                 ("Xuất TXT", XuatSachRaFile));
@@ -744,9 +1004,65 @@ namespace QuanLyThuVienUi
             RefreshSach(result);
         }
 
-        private void SapXepSachTheoTen()
+        private void TimSachTheoTen()
         {
-            dsSach.Sort((a, b) => string.Compare(a.TenSach, b.TenSach, StringComparison.OrdinalIgnoreCase));
+            string? ten = TextPrompt.Show(this, "Tìm sách", "Tên sách:");
+            if (string.IsNullOrWhiteSpace(ten))
+            {
+                return;
+            }
+
+            List<Sach> result = dsSach
+                .Where(s => s.TenSach.Contains(ten.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (result.Count == 0)
+            {
+                ShowError("Không tìm thấy sách.");
+                return;
+            }
+
+            RefreshSach(result);
+        }
+
+        private void LocSachTheoTonKho()
+        {
+            string? chon = ChoicePrompt.Show(this, "Lọc tồn kho", "Chọn tình trạng tồn kho:", new[] { "Còn hàng", "Hết hàng" });
+            if (chon == null)
+            {
+                return;
+            }
+
+            List<Sach> result = chon == "Còn hàng"
+                ? dsSach.Where(s => s.SoLuong > 0).ToList()
+                : dsSach.Where(s => s.SoLuong == 0).ToList();
+
+            if (result.Count == 0)
+            {
+                ShowError("Không có sách theo yêu cầu.");
+                return;
+            }
+
+            RefreshSach(result);
+        }
+
+        private void SapXepSachTheoMa()
+        {
+            string? chon = ChoicePrompt.Show(this, "Sắp xếp mã sách", "Chọn kiểu sắp xếp:", new[] { "Tăng dần", "Giảm dần" });
+            if (chon == null)
+            {
+                return;
+            }
+
+            if (chon == "Tăng dần")
+            {
+                dsSach.Sort((a, b) => string.Compare(a.MaSach, b.MaSach, StringComparison.OrdinalIgnoreCase));
+            }
+            else
+            {
+                dsSach.Sort((a, b) => string.Compare(b.MaSach, a.MaSach, StringComparison.OrdinalIgnoreCase));
+            }
+
             HienSach();
         }
 
@@ -876,12 +1192,21 @@ namespace QuanLyThuVienUi
 
         private void HienMuonTra()
         {
-            lblTitle.Text = "Mượn và trả sách";
+            SetTitle("Mượn và trả sách", MenuIconKind.Loans);
             SetActions(
-                ("Sách đang mượn", () => RefreshPhieuMuon(dsMuon)),
+                ("Sách đang mượn", HienSachDangMuon),
                 ("Mượn sách", MuonSach),
                 ("Trả sách", TraSach),
-                ("Độc giả trễ hạn", HienDocGiaTreHan));
+                ("Độc giả trễ hạn", HienDocGiaTreHan),
+                ("Lịch sử giao dịch", HienLichSuMuonTra),
+                ("Tìm theo độc giả", TimPhieuTheoDocGia),
+                ("Tìm theo sách", TimPhieuTheoSach));
+            RefreshPhieuMuon(dsMuon);
+        }
+
+        private void HienSachDangMuon()
+        {
+            SetTitle("Sách đang mượn", MenuIconKind.Loans);
             RefreshPhieuMuon(dsMuon);
         }
 
@@ -893,8 +1218,10 @@ namespace QuanLyThuVienUi
                 TenDocGia = TimDocGiaTheoMa(pm.MaDG)?.Ten ?? "Không rõ",
                 pm.MaSach,
                 TenSach = TimSachTheoMaCore(pm.MaSach)?.TenSach ?? "Không rõ",
+                GiaSach = DinhDangTien(TimSachTheoMaCore(pm.MaSach)?.GiaTien ?? 0),
                 NgayMuon = pm.NgayMuon.ToString("dd/MM/yyyy"),
                 NgayHenTra = pm.NgayHenTra.ToString("dd/MM/yyyy"),
+                SoNgayTre = Math.Max(0, (DateTime.Today - pm.NgayHenTra.Date).Days),
                 TrangThai = pm.BiTreHan(DateTime.Today) ? "Trễ hạn" : "Đang mượn"
             }).ToList();
             SetGridHeaders(new Dictionary<string, string>
@@ -903,13 +1230,57 @@ namespace QuanLyThuVienUi
                 ["TenDocGia"] = "Tên độc giả",
                 ["MaSach"] = "Mã sách",
                 ["TenSach"] = "Tên sách",
+                ["GiaSach"] = "Giá sách",
                 ["NgayMuon"] = "Ngày mượn",
                 ["NgayHenTra"] = "Ngày hẹn trả",
+                ["SoNgayTre"] = "Số ngày trễ",
                 ["TrangThai"] = "Trạng thái"
             });
 
             txtInfo.Text = "Số phiếu đang mượn: " + dsMuon.Count + Environment.NewLine
                          + "Số phiếu trễ hạn: " + dsMuon.Count(pm => pm.BiTreHan(DateTime.Today));
+        }
+
+        private void TimPhieuTheoDocGia()
+        {
+            string? ma = TextPrompt.Show(this, "Tìm phiếu mượn", "Mã độc giả:");
+            if (string.IsNullOrWhiteSpace(ma))
+            {
+                return;
+            }
+
+            List<PhieuMuon> result = dsMuon
+                .Where(pm => pm.MaDG.Equals(ma.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (result.Count == 0)
+            {
+                ShowError("Không tìm thấy phiếu mượn cho độc giả này.");
+                return;
+            }
+
+            RefreshPhieuMuon(result);
+        }
+
+        private void TimPhieuTheoSach()
+        {
+            string? ma = TextPrompt.Show(this, "Tìm phiếu mượn", "Mã sách:");
+            if (string.IsNullOrWhiteSpace(ma))
+            {
+                return;
+            }
+
+            List<PhieuMuon> result = dsMuon
+                .Where(pm => pm.MaSach.Equals(ma.Trim(), StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (result.Count == 0)
+            {
+                ShowError("Không tìm thấy phiếu mượn cho sách này.");
+                return;
+            }
+
+            RefreshPhieuMuon(result);
         }
 
         private void MuonSach()
@@ -1004,21 +1375,31 @@ namespace QuanLyThuVienUi
                     return;
                 }
 
-                decimal tienPhat = 0;
-                if (phieu.BiTreHanKhiTra(form.NgayTraThucTe))
-                {
-                    tienPhat += 50000;
-                }
-
-                if (form.TinhTrangSach == "Mất")
-                {
-                    tienPhat += sach.GiaTien;
-                }
+                DocGia? docGia = TimDocGiaTheoMa(phieu.MaDG);
+                string tenDocGia = docGia?.Ten ?? "Không rõ";
+                int soNgayTre = Math.Max(0, (form.NgayTraThucTe.Date - phieu.NgayHenTra.Date).Days);
+                decimal tienPhatTreHan = TinhTienPhatTreHan(soNgayTre);
+                decimal tienPhatMatSach = form.TinhTrangSach == "Mất" ? sach.GiaTien : 0;
+                decimal tienPhat = tienPhatTreHan + tienPhatMatSach;
 
                 if (tienPhat > 0)
                 {
                     string message = "Tổng tiền phạt: " + DinhDangTien(tienPhat) + Environment.NewLine
-                                   + "Xác nhận nếu độc giả đã nộp phạt.";
+                                   + "Chi tiết:" + Environment.NewLine;
+
+                    if (tienPhatTreHan > 0)
+                    {
+                        message += " - Số ngày trễ: " + soNgayTre + Environment.NewLine
+                                 + " - Phạt trễ hạn: " + DinhDangTien(tienPhatTreHan) + Environment.NewLine;
+                    }
+
+                    if (tienPhatMatSach > 0)
+                    {
+                        message += " - Phạt mất sách (giá gốc sách): " + DinhDangTien(tienPhatMatSach) + Environment.NewLine;
+                    }
+
+                    message += "Xác nhận nếu độc giả đã nộp phạt.";
+
                     if (MessageBox.Show(this, message, "Xác nhận nộp phạt", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
                     {
                         ShowError("Chưa nộp phạt. Không thể hoàn tất trả sách.");
@@ -1031,6 +1412,20 @@ namespace QuanLyThuVienUi
                     sach.SoLuong++;
                 }
 
+                dsLichSu.Add(new LichSuMuonTra
+                {
+                    MaDG = phieu.MaDG,
+                    TenDocGia = tenDocGia,
+                    MaSach = sach.MaSach,
+                    TenSach = sach.TenSach,
+                    NgayMuon = phieu.NgayMuon,
+                    NgayHenTra = phieu.NgayHenTra,
+                    NgayTraThucTe = form.NgayTraThucTe.Date,
+                    TinhTrangSach = form.TinhTrangSach,
+                    TienPhatTreHan = tienPhatTreHan,
+                    TienPhatMatSach = tienPhatMatSach
+                });
+
                 dsMuon.Remove(phieu);
                 HienMuonTra();
             }
@@ -1038,26 +1433,74 @@ namespace QuanLyThuVienUi
 
         private void HienDocGiaTreHan()
         {
+            SetTitle("Độc giả trễ hạn", MenuIconKind.Loans);
             List<PhieuMuon> treHan = dsMuon.Where(pm => pm.BiTreHan(DateTime.Today)).ToList();
             RefreshPhieuMuon(treHan);
             txtInfo.AppendText(Environment.NewLine + "Ngày hiện tại: " + DateTime.Today.ToString("dd/MM/yyyy"));
         }
 
+        private void HienLichSuMuonTra()
+        {
+            SetTitle("Lịch sử mượn trả", MenuIconKind.Loans);
+            SetActions(
+                ("Xem tất cả", () => RefreshLichSu(dsLichSu)));
+            RefreshLichSu(dsLichSu);
+        }
+
+        private void RefreshLichSu(IEnumerable<LichSuMuonTra> data)
+        {
+            grid.DataSource = data.Select(h => new
+            {
+                h.MaDG,
+                h.TenDocGia,
+                h.MaSach,
+                h.TenSach,
+                NgayMuon = h.NgayMuon.ToString("dd/MM/yyyy"),
+                NgayHenTra = h.NgayHenTra.ToString("dd/MM/yyyy"),
+                NgayTra = h.NgayTraThucTe.ToString("dd/MM/yyyy"),
+                h.TinhTrangSach,
+                h.SoNgayTre,
+                PhatTreHan = DinhDangTien(h.TienPhatTreHan),
+                PhatMatSach = DinhDangTien(h.TienPhatMatSach),
+                TongPhat = DinhDangTien(h.TongTienPhat)
+            }).ToList();
+
+            SetGridHeaders(new Dictionary<string, string>
+            {
+                ["MaDG"] = "Mã độc giả",
+                ["TenDocGia"] = "Tên độc giả",
+                ["MaSach"] = "Mã sách",
+                ["TenSach"] = "Tên sách",
+                ["NgayMuon"] = "Ngày mượn",
+                ["NgayHenTra"] = "Ngày hẹn trả",
+                ["NgayTra"] = "Ngày trả",
+                ["TinhTrangSach"] = "Tình trạng",
+                ["SoNgayTre"] = "Số ngày trễ",
+                ["PhatTreHan"] = "Phạt trễ hạn",
+                ["PhatMatSach"] = "Phạt mất sách",
+                ["TongPhat"] = "Tổng phạt"
+            });
+
+            txtInfo.Text = "Tổng giao dịch đã hoàn tất: " + data.Count() + Environment.NewLine
+                         + "Tổng tiền phạt đã thu: " + DinhDangTien(data.Sum(h => h.TongTienPhat));
+        }
+
         private void HienThongKe()
         {
-            lblTitle.Text = "Thống kê";
+            SetTitle("Thống kê", MenuIconKind.Stats);
             SetActions(
                 ("Thống kê tổng hợp", HienThongKeTongHop),
-                ("Sách đang mượn", () => RefreshPhieuMuon(dsMuon)),
+                ("Sách đang mượn", HienSachDangMuon),
                 ("Độc giả trễ hạn", HienDocGiaTreHan),
                 ("Sắp xếp độc giả", SapXepDocGiaTheoTen),
-                ("Sắp xếp theo tên", SapXepSachTheoTen),
+                ("Sắp xếp mã sách", SapXepSachTheoMa),
                 ("Sắp xếp số lượng", SapXepSachTheoSoLuong));
             HienThongKeTongHop();
         }
 
         private void HienThongKeTongHop()
         {
+            SetTitle("Thống kê", MenuIconKind.Stats);
             var thongKeTheLoai = dsSach
                 .GroupBy(s => s.TheLoai)
                 .Select(g => new
@@ -1079,6 +1522,10 @@ namespace QuanLyThuVienUi
             int tongSachCon = dsSach.Sum(s => s.SoLuong);
             int soSachDangMuon = dsMuon.Count;
             int tongSachDangQuanLy = tongSachCon + soSachDangMuon;
+            int tongNgayTre = dsMuon.Where(pm => pm.BiTreHan(DateTime.Today))
+                .Sum(pm => (DateTime.Today - pm.NgayHenTra.Date).Days);
+            decimal tongTienPhatTreHan = dsMuon.Where(pm => pm.BiTreHan(DateTime.Today))
+                .Sum(pm => TinhTienPhatTreHan((DateTime.Today - pm.NgayHenTra.Date).Days));
 
             List<string> lines = new List<string>
             {
@@ -1096,7 +1543,11 @@ namespace QuanLyThuVienUi
                 "Độc giả VIP: " + dsDocGia.Count(d => d.Loai == "VIP"),
                 "Độc giả sinh viên: " + dsDocGia.Count(d => d.Loai == "Sinh viên"),
                 "",
-                "Độc giả trễ hạn: " + dsMuon.Count(pm => pm.BiTreHan(DateTime.Today))
+                "Độc giả trễ hạn: " + dsMuon.Count(pm => pm.BiTreHan(DateTime.Today)),
+                "Tổng số ngày trễ hiện tại: " + tongNgayTre,
+                "Tổng tiền phạt trễ hạn ước tính: " + DinhDangTien(tongTienPhatTreHan),
+                "Tổng giao dịch hoàn tất: " + dsLichSu.Count,
+                "Tổng tiền phạt đã thu: " + DinhDangTien(dsLichSu.Sum(h => h.TongTienPhat))
             };
 
             txtInfo.Text = string.Join(Environment.NewLine, lines);
@@ -1213,6 +1664,16 @@ namespace QuanLyThuVienUi
                 "tai lieu tham khao" or "tài liệu tham khảo" => "Tài liệu tham khảo",
                 _ => trimmed
             };
+        }
+
+        private static decimal TinhTienPhatTreHan(int soNgayTre)
+        {
+            if (soNgayTre <= 0)
+            {
+                return 0;
+            }
+
+            return soNgayTre < 10 ? 20000 : 50000;
         }
 
         private static string DinhDangTien(decimal soTien)

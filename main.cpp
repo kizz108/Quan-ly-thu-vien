@@ -113,6 +113,15 @@ bool xacNhanNopPhat(double soTienPhat) {
     } while (true);
 }
 
+double tinhTienPhatTreHan(int soNgayTre) {
+    if (soNgayTre <= 0) {
+        return 0.0;
+    }
+    // Phat 20k cho moi ngay neu tre <= 9 ngay
+    // Phat 50k cho moi ngay neu tre >= 10 ngay
+    return soNgayTre <= 9 ? soNgayTre * 20000.0 : soNgayTre * 50000.0;
+}
+
 bool laNamNhuan(int nam) {
     return (nam % 400 == 0) || (nam % 4 == 0 && nam % 100 != 0);
 }
@@ -544,11 +553,43 @@ public:
     }
 };
 
+struct LichSuMuonTra {
+    string maDG;
+    string tenDocGia;
+    string maSach;
+    string tenSach;
+    string ngayMuon;
+    string ngayHenTra;
+    string ngayTraThucTe;
+    string tinhTrangSach;
+    int soNgayTre;            // so ngay tre hen tra de thong ke
+    int soNgayTreQuaQuyDinh;  // so ngay vuot qua han muc cho phep de tinh phat
+    double tienPhatTreHan;
+    double tienPhatMatSach;
+    double tongTienPhat;
+};
+
+// Enum xac dinh tieu chi sap xep
+enum SortCriteria {
+    NONE = 0,
+    MA_DOC_GIA = 1,
+    GIOI_TINH = 2,
+    LOAI_DOC_GIA = 3
+};
+
+// Struct de luu trang thai sap xep
+struct SortState {
+    SortCriteria criteria = NONE;
+    bool ascending = true;  // true = tang, false = giam
+};
+
 class ThuVien {
 private:
     vector<unique_ptr<DocGia>> dsDocGia;
     vector<Sach> dsSach;
     vector<PhieuMuon> dsMuon;
+    vector<LichSuMuonTra> dsLichSu;
+    SortState sortState;  // Luu trang thai sap xep hien tai
 
 public:
     ThuVien() {
@@ -564,6 +605,26 @@ public:
             Sach("109", "Toi thay hoa vang tren co xanh", "Van hoc", 95000, 6),
             Sach("110", "Truyen Kieu", "Van hoc", 70000, 4)
         };
+
+        dsDocGia.push_back(make_unique<DocGiaThuong>());
+        dsDocGia.back()->setMaDG("DG001");
+        dsDocGia.back()->setThongTin("DG001", "Nguyen Van Anh", 28, "nam", "0901234567", "anh.nguyen@example.com", "Ha Noi");
+
+        dsDocGia.push_back(make_unique<DocGiaVIP>());
+        dsDocGia.back()->setMaDG("DG002");
+        dsDocGia.back()->setThongTin("DG002", "Tran Thi Minh", 35, "nu", "0912345678", "minh.tran@example.com", "Ho Chi Minh");
+
+        dsDocGia.push_back(make_unique<DocGiaSinhVien>());
+        dsDocGia.back()->setMaDG("DG003");
+        dsDocGia.back()->setThongTin("DG003", "Le Van Nam", 21, "nam", "0987654321", "nam.le@student.edu.vn", "Da Nang");
+
+        dsDocGia.push_back(make_unique<DocGiaThuong>());
+        dsDocGia.back()->setMaDG("DG004");
+        dsDocGia.back()->setThongTin("DG004", "Pham Thi Hong", 30, "nu", "0945678123", "hong.pham@example.com", "Can Tho");
+
+        dsDocGia.push_back(make_unique<DocGiaVIP>());
+        dsDocGia.back()->setMaDG("DG005");
+        dsDocGia.back()->setThongTin("DG005", "Do Quoc Bao", 42, "nam", "0978123456", "bao.do@example.com", "Hai Phong");
     }
 
     void inTieuDeDocGia() const {
@@ -668,12 +729,82 @@ public:
         return pos == -1 ? "Khong ro" : dsSach[pos].getTenSach();
     }
 
+    // Cac ham sap xep
+    void sortByMaDG(bool ascending) {
+        sort(dsDocGia.begin(), dsDocGia.end(),
+             [ascending](const unique_ptr<DocGia>& a, const unique_ptr<DocGia>& b) {
+                 int cmp = a->getMaDG().compare(b->getMaDG());
+                 return ascending ? cmp < 0 : cmp > 0;
+             });
+    }
+
+    void sortByGioiTinh(bool ascending) {
+        sort(dsDocGia.begin(), dsDocGia.end(),
+             [ascending](const unique_ptr<DocGia>& a, const unique_ptr<DocGia>& b) {
+                 int cmp = a->getGioiTinh().compare(b->getGioiTinh());
+                 return ascending ? cmp < 0 : cmp > 0;
+             });
+    }
+
+    void sortByLoaiDocGia(bool ascending) {
+        sort(dsDocGia.begin(), dsDocGia.end(),
+             [ascending](const unique_ptr<DocGia>& a, const unique_ptr<DocGia>& b) {
+                 int cmp = a->getLoaiDocGia().compare(b->getLoaiDocGia());
+                 return ascending ? cmp < 0 : cmp > 0;
+             });
+    }
+
 public:
-    void xemDocGia() const {
+    void xemDocGia() {
         cout << "\n===== DANH SACH DOC GIA =====\n";
         if (dsDocGia.empty()) {
             cout << "Danh sach doc gia dang rong.\n";
             return;
+        }
+
+        // Menu chon tieu chi sap xep
+        int chon;
+        do {
+            cout << "\nTieu chi sap xep:\n";
+            cout << "1. Sap xep theo Ma doc gia\n";
+            cout << "2. Sap xep theo Gioi tinh\n";
+            cout << "3. Sap xep theo Loai doc gia\n";
+            cout << "0. Khong sap xep\n";
+            chon = nhapSoNguyen("Chon: ", 0);
+
+            if (chon >= 0 && chon <= 3) {
+                break;
+            }
+            cout << "Lua chon khong hop le. Vui long chon lai!\n";
+        } while (true);
+
+        // Neu chon cung tieu chi nhu lan truoc, dao chieu
+        SortCriteria selectedCriteria = static_cast<SortCriteria>(chon);
+        if (selectedCriteria != NONE) {
+            if (sortState.criteria == selectedCriteria) {
+                sortState.ascending = !sortState.ascending;
+            } else {
+                sortState.criteria = selectedCriteria;
+                sortState.ascending = true;  // Tieu chi moi, bat dau tu tang
+            }
+
+            // Thuc hien sap xep
+            switch (sortState.criteria) {
+            case MA_DOC_GIA:
+                sortByMaDG(sortState.ascending);
+                cout << "Sap xep theo Ma doc gia (" << (sortState.ascending ? "tang" : "giam") << ")\n";
+                break;
+            case GIOI_TINH:
+                sortByGioiTinh(sortState.ascending);
+                cout << "Sap xep theo Gioi tinh (" << (sortState.ascending ? "tang" : "giam") << ")\n";
+                break;
+            case LOAI_DOC_GIA:
+                sortByLoaiDocGia(sortState.ascending);
+                cout << "Sap xep theo Loai doc gia (" << (sortState.ascending ? "tang" : "giam") << ")\n";
+                break;
+            default:
+                break;
+            }
         }
 
         inTieuDeDocGia();
@@ -1076,22 +1207,43 @@ public:
         }
 
         string tinhTrang = chonTinhTrangSach();
-        double tienPhat = 0.0;
+        double tienPhatTreHan = 0.0;
+        double tienPhatMatSach = 0.0;
 
-        if (phieuMuon.biTreHanKhiTra(ngayTraThucTe)) {
-            tienPhat += 50000.0;
-            cout << "Tra sach tre han. Phat: " << dinhDangTien(50000.0) << '\n';
+        int posDG = timViTriDocGia(phieuMuon.getMaDG());
+        int soNgayTre = max(0, khoangCachNgay(phieuMuon.getNgayHenTra(), ngayTraThucTe));
+        int soNgayTreQuaQuyDinh = 0;
+        if (posDG != -1) {
+            int ngayMuonSerial = ngayToSerialDay(phieuMuon.getNgayMuon());
+            int ngayTraSerial = ngayToSerialDay(ngayTraThucTe);
+            int soNgayMuonToiDa = dsDocGia[posDG]->getSoNgayMuonToiDa();
+            int ngayMuonToiDaSerial = ngayMuonSerial + soNgayMuonToiDa - 1;
+            if (ngayTraSerial > ngayMuonToiDaSerial) {
+                soNgayTreQuaQuyDinh = ngayTraSerial - ngayMuonToiDaSerial;
+            }
+        }
+
+        if (soNgayTreQuaQuyDinh > 0) {
+            tienPhatTreHan = tinhTienPhatTreHan(soNgayTreQuaQuyDinh);
+            cout << "Tra sach vuot qua han muc cho phep " << soNgayTreQuaQuyDinh
+                 << " ngay. Phat tre han: " << dinhDangTien(tienPhatTreHan) << '\n';
+        } else if (soNgayTre > 0) {
+            cout << "Tra sach muon qua hen tra du kien nhung van trong quyen muon toi da. Khong bi phat tre han." << '\n';
         }
 
         if (tinhTrang == "mat") {
-            double phatMatSach = dsSach[posSach].getGiaTien();
-            tienPhat += phatMatSach;
-            cout << "Sach bi mat. Phat 100% tien sach: " << dinhDangTien(phatMatSach) << '\n';
+            tienPhatMatSach = dsSach[posSach].getGiaTien();
+            cout << "Sach bi mat. Phat mat sach (gia goc): "
+                 << dinhDangTien(tienPhatMatSach) << '\n';
         }
 
-        if (tienPhat > 0 && !xacNhanNopPhat(tienPhat)) {
-            cout << "Chua nop phat. Khong the hoan tat tra sach!\n";
-            return;
+        double tienPhat = tienPhatTreHan + tienPhatMatSach;
+        if (tienPhat > 0) {
+            cout << "Tong tien phat: " << dinhDangTien(tienPhat) << '\n';
+            if (!xacNhanNopPhat(tienPhat)) {
+                cout << "Chua nop phat. Khong the hoan tat tra sach!\n";
+                return;
+            }
         }
 
         if (tinhTrang == "con") {
@@ -1100,6 +1252,22 @@ public:
         } else {
             cout << "Sach bi mat. Khong tang lai so luong sach.\n";
         }
+
+        LichSuMuonTra lichSu;
+        lichSu.maDG = phieuMuon.getMaDG();
+        lichSu.tenDocGia = layTenDocGia(phieuMuon.getMaDG());
+        lichSu.maSach = phieuMuon.getMaSach();
+        lichSu.tenSach = layTenSach(phieuMuon.getMaSach());
+        lichSu.ngayMuon = phieuMuon.getNgayMuon();
+        lichSu.ngayHenTra = phieuMuon.getNgayHenTra();
+        lichSu.ngayTraThucTe = ngayTraThucTe;
+        lichSu.tinhTrangSach = tinhTrang;
+        lichSu.soNgayTre = soNgayTre;
+        lichSu.soNgayTreQuaQuyDinh = soNgayTreQuaQuyDinh;
+        lichSu.tienPhatTreHan = tienPhatTreHan;
+        lichSu.tienPhatMatSach = tienPhatMatSach;
+        lichSu.tongTienPhat = tienPhat;
+        dsLichSu.push_back(lichSu);
 
         dsMuon.erase(dsMuon.begin() + posMuon);
         cout << "Lap phieu tra sach thanh cong!\n";
@@ -1115,6 +1283,45 @@ public:
         inTieuDePhieuMuon();
         for (const auto& pm : dsMuon) {
             pm.xuat();
+        }
+    }
+
+    void xemLichSuMuonTra() const {
+        cout << "\n===== LICH SU MUON TRA =====\n";
+        if (dsLichSu.empty()) {
+            cout << "Chua co giao dich tra sach nao.\n";
+            return;
+        }
+
+        cout << left
+             << setw(12) << "Ma DG"
+             << setw(24) << "Ten doc gia"
+             << setw(12) << "Ma sach"
+             << setw(30) << "Ten sach"
+             << setw(14) << "Ngay muon"
+             << setw(14) << "Hen tra"
+             << setw(14) << "Ngay tra"
+             << setw(10) << "Tre"
+             << setw(16) << "Phat tre han"
+             << setw(16) << "Phat mat sach"
+             << setw(16) << "Tong phat"
+             << '\n';
+        cout << string(164, '-') << '\n';
+
+        for (const auto& lichSu : dsLichSu) {
+            cout << left
+                 << setw(12) << lichSu.maDG
+                 << setw(24) << lichSu.tenDocGia
+                 << setw(12) << lichSu.maSach
+                 << setw(30) << lichSu.tenSach
+                 << setw(14) << lichSu.ngayMuon
+                 << setw(14) << lichSu.ngayHenTra
+                 << setw(14) << lichSu.ngayTraThucTe
+                 << setw(10) << lichSu.soNgayTre
+                 << setw(16) << dinhDangTien(lichSu.tienPhatTreHan)
+                 << setw(16) << dinhDangTien(lichSu.tienPhatMatSach)
+                 << setw(16) << dinhDangTien(lichSu.tongTienPhat)
+                 << '\n';
         }
     }
 
@@ -1180,12 +1387,20 @@ public:
             thongKeLoaiDocGia[dg->getLoaiDocGia()]++;
         }
 
+        double tongTienPhatThuDuoc = 0.0;
+        for (const auto& lichSu : dsLichSu) {
+            tongTienPhatThuDuoc += lichSu.tongTienPhat;
+        }
+
         cout << "\nTong so doc gia: " << dsDocGia.size() << '\n';
         cout << "Doc gia nam: " << nam << '\n';
         cout << "Doc gia nu: " << nu << '\n';
         for (const auto& item : thongKeLoaiDocGia) {
             cout << "Doc gia " << item.first << ": " << item.second << '\n';
         }
+
+        cout << "\nTong so giao dich tra sach: " << dsLichSu.size() << '\n';
+        cout << "Tong tien phat da thu: " << dinhDangTien(tongTienPhatThuDuoc) << '\n';
 
         xemDocGiaTreHan();
     }
@@ -1205,8 +1420,16 @@ public:
              << '\n';
         cout << string(106, '-') << '\n';
 
+        int todaySerial = ngayToSerialDay(ngayHienTaiString());
         for (const auto& pm : dsMuon) {
-            if (pm.biTreHan()) {
+            int posDG = timViTriDocGia(pm.getMaDG());
+            if (posDG == -1) {
+                continue;
+            }
+
+            int ngayMuonSerial = ngayToSerialDay(pm.getNgayMuon());
+            int ngayMuonToiDaSerial = ngayMuonSerial + dsDocGia[posDG]->getSoNgayMuonToiDa();
+            if (todaySerial > ngayMuonToiDaSerial) {
                 cout << left
                      << setw(12) << pm.getMaDG()
                      << setw(24) << layTenDocGia(pm.getMaDG())
@@ -1232,11 +1455,33 @@ public:
         xemDocGia();
     }
 
-    void sapXepSachTheoTen() {
-        sort(dsSach.begin(), dsSach.end(), [](const Sach& a, const Sach& b) {
-            return toLowerCopy(a.getTenSach()) < toLowerCopy(b.getTenSach());
-        });
-        cout << "Da sap xep sach theo ten.\n";
+    void sapXepSachTheoMaSach() {
+        int chon;
+        do {
+            cout << "\nSap xep sach theo ma sach:\n";
+            cout << "1. Tang dan\n";
+            cout << "2. Giam dan\n";
+            chon = nhapSoNguyen("Chon: ", 1);
+
+            if (chon == 1) {
+                sort(dsSach.begin(), dsSach.end(), [](const Sach& a, const Sach& b) {
+                    return toLowerCopy(a.getMaSach()) < toLowerCopy(b.getMaSach());
+                });
+                cout << "Da sap xep sach theo ma sach tang dan.\n";
+                break;
+            }
+
+            if (chon == 2) {
+                sort(dsSach.begin(), dsSach.end(), [](const Sach& a, const Sach& b) {
+                    return toLowerCopy(a.getMaSach()) > toLowerCopy(b.getMaSach());
+                });
+                cout << "Da sap xep sach theo ma sach giam dan.\n";
+                break;
+            }
+
+            cout << "Lua chon khong hop le. Vui long chon lai!\n";
+        } while (true);
+
         xemSach();
     }
 
@@ -1311,6 +1556,7 @@ void menuQuanLySach(ThuVien& tv) {
         cout << "6. Tim kiem sach theo the loai\n";
         cout << "7. Nhap danh sach sach tu file txt\n";
         cout << "8. Xuat danh sach sach ra file txt\n";
+        cout << "9. Sap xep sach theo ma sach\n";
         cout << "0. Quay lai menu chinh\n";
         chon = nhapSoNguyen("Chon: ", 0);
 
@@ -1323,6 +1569,7 @@ void menuQuanLySach(ThuVien& tv) {
         case 6: tv.timKiemSachTheoTheLoai(); break;
         case 7: tv.nhapSachTuFile(); break;
         case 8: tv.xuatSachRaFile(); break;
+        case 9: tv.sapXepSachTheoMaSach(); break;
         case 0: break;
         default: cout << "Lua chon khong hop le!\n"; break;
         }
@@ -1337,7 +1584,7 @@ void menuThongKe(ThuVien& tv) {
         cout << "2. Xem danh sach sach dang muon\n";
         cout << "3. Xem danh sach doc gia tre han\n";
         cout << "4. Sap xep doc gia theo ten\n";
-        cout << "5. Sap xep sach theo ten\n";
+        cout << "5. Sap xep sach theo ma sach\n";
         cout << "6. Sap xep sach theo so luong\n";
         cout << "0. Quay lai menu chinh\n";
         chon = nhapSoNguyen("Chon: ", 0);
@@ -1347,7 +1594,7 @@ void menuThongKe(ThuVien& tv) {
         case 2: tv.xemPhieuDangMuon(); break;
         case 3: tv.xemDocGiaTreHan(); break;
         case 4: tv.sapXepDocGiaTheoTen(); break;
-        case 5: tv.sapXepSachTheoTen(); break;
+        case 5: tv.sapXepSachTheoMaSach(); break;
         case 6: tv.sapXepSachTheoSoLuong(); break;
         case 0: break;
         default: cout << "Lua chon khong hop le!\n"; break;
